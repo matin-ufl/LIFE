@@ -7,41 +7,47 @@ just.minute <- function(timeStr) {
      minute <- as.numeric(substr(timeStr, start = 14, stop = 15))
 }
 just.second <- function(timeStr) {
-     second <- as.numeric(substr(timeStr, start = 17, stop = 18))
+  second <- as.numeric(substr(timeStr, start = 17, stop = 18))
 }
 find.startEndIdx <- function(givenStart, df) {
-     tokens <- unlist(strsplit(givenStart, split = ":"))
-     hour <- as.numeric(tokens[1])
-     minute <- as.numeric(tokens[2])
-     second <- as.numeric(tokens[3])
-     
-     first.chunk <- df[df$hour == hour, ]
-     second.chunk <- first.chunk[first.chunk$minute == minute, ]
-     final.chunk <- second.chunk[second.chunk$second == second, ]
-     
-     if(nrow(final.chunk) > 0) {
-          exact.idx <- final.chunk$sortorder[1]
-     } else {
-          if(nrow(second.chunk) > 0) {
-               exact.idx <- second.chunk$sortorder[1]
-          } else {
-               if(nrow(first.chunk) > 0) {
-                    exact.idx <- first.chunk$sortorder[1]
-               } else {
-                    exact.idx <- 1
-               }
-          }
-     }
-     
-     
-     startIdx <- max(1, (exact.idx - (SCAN_DURATION)))
-     endIdx <- min(nrow(df), (exact.idx + (SCAN_DURATION * 60)))
-     data.frame(startIdx, endIdx)
+  if(nchar(givenStart) > 6) {
+    tokens <- unlist(strsplit(givenStart, split = ":"))
+    hour <- as.numeric(tokens[1])
+    minute <- as.numeric(tokens[2])
+    second <- as.numeric(tokens[3])
+    
+    first.chunk <- df[df$hour == hour, ]
+    second.chunk <- first.chunk[first.chunk$minute == minute, ]
+    final.chunk <- second.chunk[second.chunk$second == second, ]
+    
+    if(nrow(final.chunk) > 0) {
+      exact.idx <- final.chunk$sortorder[1]
+    } else {
+      if(nrow(second.chunk) > 0) {
+        exact.idx <- second.chunk$sortorder[1]
+      } else {
+        if(nrow(first.chunk) > 0) {
+          exact.idx <- first.chunk$sortorder[1]
+        } else {
+          exact.idx <- 1
+        }
+      }
+    }
+  } else {
+    exact.idx <- 1
+  }
+  
+  startIdx <- max(1, (exact.idx - (SCAN_DURATION)))
+  endIdx <- min(nrow(df), (exact.idx + (SCAN_DURATION * 60)))
+  data.frame(startIdx, endIdx)
 }
 
 walktime.finder <- function(df, ppt.walktimes.df, indices) {
      # Scanning begins
      window.length <- ppt.walktimes.df$meter400
+     if(is.na(window.length)) {
+       window.length <- 60 * 8
+     }
      best.start <- 1
      best.end <- 1 + window.length
      nonZeroPrc <- 0
