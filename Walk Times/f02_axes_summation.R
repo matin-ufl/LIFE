@@ -85,6 +85,11 @@ generate.axes.sum <- function(xlsx_file_start_and_end, dataFiles_folder, visit_s
           
           message(paste("[LOG] (", i, " out of ", nrow(intervals.df), ") HID", HID, ".Rdata (PID: ", PID, ") is being analyzed.", sep = ""))
           
+          if(is.null(HID) || length(HID) == 0) {
+               message(paste("PID (", PID, ") has no corresponding HID... SKIPPED.", sep = ""))
+               next()
+          }
+          
           load(paste(dataFiles_folder, "HID", HID, ".Rdata", sep = "")); AC.1s$TimeStamp <- as.character(AC.1s$TimeStamp)
           AC.1s$time <- sapply(AC.1s$TimeStamp, FUN = function(x){format(as.POSIXct(x), "%T")})
           start.idx <- min(which(AC.1s$time == intervals.df$start[i]))
