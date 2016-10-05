@@ -1,6 +1,6 @@
 #######################################################################################
-### For every participants (PID) fed into this function, it provides summations of  ###
-### each axis and writes them in a csv file.                                        ###
+### For every participants (PID) fed into this function, it provides summations and ###
+### standard deviation of each axis and writes them in a csv file.                  ###
 ###                                                                                 ###
 ### Inputs:                                                                         ###
 ###     1. xlsx_file_start_and_end: the .xlsx file containing the following columns ###
@@ -77,7 +77,7 @@ generate.axes.sum <- function(xlsx_file_start_and_end, dataFiles_folder, visit_s
      message("[LOG] Cleaning .xlsx file ended. Times are cleaned and ready to use.")
      message()
      
-     out.df <- data.frame(matrix(nrow = 0, ncol = 5))
+     out.df <- data.frame(matrix(nrow = 0, ncol = 8))
      
      for(i in 1:nrow(intervals.df)) {
           HID <- as.numeric(unlist(intervals.df$HID[i]))
@@ -99,7 +99,10 @@ generate.axes.sum <- function(xlsx_file_start_and_end, dataFiles_folder, visit_s
                                 PID = PID,
                                 axis1 = sum(selectedPart.df$axis1, na.rm = T),
                                 axis2 = sum(selectedPart.df$axis2, na.rm = T),
-                                axis3 = sum(selectedPart.df$axis3, na.rm = T))
+                                axis3 = sum(selectedPart.df$axis3, na.rm = T),
+                                axis1_std = sd(selectedPart.df$axis1, na.rm = T),
+                                axis2_std = sd(selectedPart.df$axis2, na.rm = T),
+                                axis3_std = sd(selectedPart.df$axis3, na.rm = T))
           out.df <- rbind(out.df, temp.df)
      }
      
