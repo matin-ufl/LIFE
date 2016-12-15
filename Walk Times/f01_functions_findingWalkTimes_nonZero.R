@@ -16,9 +16,12 @@ find.startEndIdx <- function(givenStart, df) {
     minute <- as.numeric(tokens[2])
     second <- as.numeric(tokens[3])
     
-    first.chunk <- df[df$hour == hour, ]
-    second.chunk <- first.chunk[first.chunk$minute == minute, ]
-    final.chunk <- second.chunk[second.chunk$second == second, ]
+    temp.idx <- which(df$hour == hour)
+    first.chunk <- df[temp.idx, ]
+    temp.idx <- which(first.chunk$minute == minute)
+    second.chunk <- first.chunk[temp.idx, ]
+    temp.idx <- which(second.chunk$second == second)
+    final.chunk <- second.chunk[temp.idx, ]
     
     if(nrow(final.chunk) > 0) {
       exact.idx <- final.chunk$sortorder[1]
@@ -38,7 +41,7 @@ find.startEndIdx <- function(givenStart, df) {
   }
   
   startIdx <- max(1, (exact.idx - (SCAN_DURATION)))
-  endIdx <- min(nrow(df), (exact.idx + (SCAN_DURATION * 60)))
+  endIdx <- min(nrow(df), (exact.idx + (SCAN_DURATION)))
   data.frame(startIdx, endIdx)
 }
 
@@ -97,6 +100,8 @@ walktime.finder <- function(df, ppt.walktimes.df, indices) {
           rm(alternative.end, alternative.nonZeroPrc, alternative.start)
      }
      
+     # Newly added feature: resemblance: what is the non-zero percentage
+     resemblance <- round(sum(df$axis1[best.start:best.end] != 0) * 100 / (best.end - best.start + 1), digits = 2)
      
      result <- data.frame(PID,
                           found_walk_start = substr(df$datetime[best.start], start = 11, stop = nchar(df$datetime[best.start])),
@@ -105,6 +110,7 @@ walktime.finder <- function(df, ppt.walktimes.df, indices) {
                           accelerometer_file_start = substr(df$datetime[1], start = 11, stop = nchar(df$datetime[1])),
                           start_idx = best.start,
                           end_idx = best.end,
+                          resemblance,
                           status)
      result
 }

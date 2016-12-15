@@ -20,8 +20,8 @@ walktimes.df <- read.csv(file = recordTime_400m, skip = 3, header = F)
 colnames(walktimes.df) <- c("MaskID","PartcipantID","vc","timestart","timestop","Accelerometry","meter400","start","stop")
 walktimes.df <- walktimes.df[walktimes.df$vc == "F06", ]
 
-l <- dir(data.directory)
-result <- data.frame(matrix(nrow = 0, ncol = 8))
+l <- dir(data.directory, pattern = "^000.*[.csv]$")
+result <- data.frame(matrix(nrow = 0, ncol = 9))
 for(i in 1:length(l)) {
   print(paste("[", Sys.time(), "] ", l[i], " is being scanned... (", i, " out of ", length(l), ")", sep = ""))
   df <- read.csv(paste(data.directory, l[i], sep = ""))
@@ -31,7 +31,7 @@ for(i in 1:length(l)) {
   df$hour <- sapply(df$datetime, just.hour)
   df$minute <- sapply(df$datetime, just.minute)
   df$second <- sapply(df$datetime, just.second)
-  
+  df$pid <- as.character(df$pid)
   PID <- df$pid[1]
   ppt.walktimes.df <- walktimes.df[walktimes.df$PartcipantID == PID, ]
   if(nrow(ppt.walktimes.df) > 0) {
