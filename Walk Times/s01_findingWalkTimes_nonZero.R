@@ -1,70 +1,83 @@
-setwd("V:/Matin/R Codes/LIFE-master/Walk Times/")
-
-# Parameters to set -------------------------------
-recordTime_400m <- "400recordtime.csv"
-data.directory <- "V:/ARRC/Active_Studies/ANALYSIS_ONGOING/LIFE Main data/F06/"
-
-
+# Working Parameters -----------------------------------
+# Please provide correct file and folder addresses
+working.directory <- '~/Workspaces/R workspace/LIFE/Walk Times/'
+baseline.folder <- '~/../../Volumes/SHARE/ARRC/Active_Studies/ANALYSIS_ONGOING/LIFE Main data/LIFE accelerometry - second data - 10_26_15/'
+w400.tests.filename <- '~/Desktop/Baseline/400recordtime.csv'
+output_csv <- "V:/Matin/R Codes/LIFE-master/walkTimesFound_020217.csv"
+mappingFileName <- "PID_VC_HID.Rdata"
+visit <- "F12" # select from { SV1, F06, F12, F24}
 
 # Setting Criteria --------------------------------
 SCAN_DURATION <- 35 * 60
 NON_ZERO_THRESHOLD <- 70
 SLIDING_STEP <- 30
-DATA_DAY_LIMIT <- 23 * 60 * 60
+DATA_DAY_LIMIT <- 10 * 60 * 60
 
-# Functions ---------------------------------
-
-source("f01_functions_findingWalkTimes_nonZero.R")
-# Script ------------------------------------
-walktimes.df <- read.csv(file = recordTime_400m, skip = 3, header = F)
-colnames(walktimes.df) <- c("MaskID","PartcipantID","vc","timestart","timestop","Accelerometry","meter400","start","stop")
-walktimes.df <- walktimes.df[walktimes.df$vc == "F06", ]
-
-l <- dir(data.directory, pattern = "^000.*[.csv]$")
-result <- data.frame(matrix(nrow = 0, ncol = 9))
-for(i in 1:length(l)) {
-  print(paste("[", Sys.time(), "] ", l[i], " is being scanned... (", i, " out of ", length(l), ")", sep = ""))
-  df <- read.csv(paste(data.directory, l[i], sep = ""))
-  
-  df <- df[df$sortorder, ]
-  df$datetime <- as.character(df$datetime)
-  df$hour <- sapply(df$datetime, just.hour)
-  df$minute <- sapply(df$datetime, just.minute)
-  df$second <- sapply(df$datetime, just.second)
-  df$pid <- as.character(df$pid)
-  PID <- df$pid[1]
-  ppt.walktimes.df <- walktimes.df[walktimes.df$PartcipantID == PID, ]
-  if(nrow(ppt.walktimes.df) > 0) {
-    
-    ppt.walktimes.df$start <- as.character(ppt.walktimes.df$start)
-    ppt.walktimes.df$stop <- as.character(ppt.walktimes.df$stop)
-    ppt.walktimes.df$meter400 <- as.numeric(as.character(ppt.walktimes.df$meter400))
-    
-    # Finding the right indices
-    indices <- find.startEndIdx(df = df[1:DATA_DAY_LIMIT, ], givenStart = ppt.walktimes.df$start)
-    
-    if(is.na(indices$startIdx)) {
-      indices$startIdx <- 1
-    }
-    if(is.na(indices$endIdx)) {
-      indices$endIdx <- min(nrow(df), (indices$startIdx + (SCAN_DURATION * 2)))
-    }
-    curr.result <- walktime.finder(df, ppt.walktimes.df, indices)
-    result <- rbind(result, curr.result)
-    colnames(result) <- colnames(curr.result)
-  } else {
-    print("No walking record found...")
-  }
-  
-  # Plot to check
-  #plot.idx <- seq(1, 2000, by = 300)
-  #ggplot(data = df[1:2000, ]) + geom_point(aes(x = datetime, y = axis1), shape = 3, alpha = 0.5) + theme_bw() + 
-  #scale_x_discrete(breaks = df$datetime[plot.idx]) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+# Functions ----------------------------------------
+convertToFileName <- function(hid) {
+     s <- as.character(hid)
+     while(nchar(s) < 4) {
+          s <- paste("0", s, sep = '')
+     }
+     paste("HID", s, ".Rdata", sep = '')
 }
 
-write.csv(result, file = "V:/Matin/R Codes/LIFE-master/walkTimesFound_041616.csv", row.names = F)
+just.onePartOfTime <- function(ts, which.part = 1) {
+     times <- unlist(strsplit(ts, split = " "))[2]
+     as.character(unlist(strsplit(times, split = ":"))[which.part])
+}
+
+
+# The Script ------------- main -------------------------------
+setwd(working.directory)
+source("f01_functions_findingWalkTimes_nonZero.R")
+
+walktimes.df <- read.csv(file = w400.tests.filename, header = T)
+colnames(walktimes.df) <- c("MaskID","PartcipantID","vc","timestart","timestop","Accelerometry","meter400","start","stop")
+walktimes.df <- walktimes.df[walktimes.df$vc == visit, ]
+load(mappingFileName); hid_pid_mapping <- REF; rm(REF); hid_pid_mapping <- hid_pid_mapping[hid_pid_mapping$seq == 0, ]
+
+l <- dir(path = baseline.folder, pattern = '^HID[0-9]{4}.Rdata$')
+
+hid_pid_mapping$filename <- sapply(hid_pid_mapping$HID, FUN = convertToFileName)
+result <- data.frame(matrix(nrow = 0, ncol = 9))
+for (i in 1:length(l)) {
+     filename <- l[i]
+     print(paste("[", Sys.time(), "] ", filename, " is being scanned... (", i, " out of ", length(l), ")", sep = ""))
+     load(paste(baseline.folder, filename, sep = ""))
+     AC.1s$TimeStamp <- as.character(AC.1s$TimeStamp)
+     AC.1s$hour <- sapply(AC.1s$TimeStamp, FUN = just.onePartOfTime, which.part = 1); AC.1s$hour <- as.numeric(AC.1s$hour)
+     AC.1s$minute <- sapply(AC.1s$TimeStamp, FUN = just.onePartOfTime, which.part = 2); AC.1s$minute <- as.numeric(AC.1s$minute)
+     AC.1s$second <- sapply(AC.1s$TimeStamp, FUN = just.onePartOfTime, which.part = 3); AC.1s$second <- as.numeric(AC.1s$second)
+     PID <- hid_pid_mapping$pid[hid_pid_mapping$filename == filename]
+     if(length(PID) > 0) {
+          ppt.walktimes.df <- walktimes.df[which(walktimes.df$PartcipantID == PID), ]
+          if(nrow(ppt.walktimes.df) > 0) {
+               ppt.walktimes.df$start <- as.character(ppt.walktimes.df$start)
+               ppt.walktimes.df$stop <- as.character(ppt.walktimes.df$stop)
+               ppt.walktimes.df$meter400 <- as.numeric(as.character(ppt.walktimes.df$meter400))
+               
+               # Finding the right indices
+               indices <- find.startEndIdx(df = AC.1s[1:DATA_DAY_LIMIT, ], givenStart = ppt.walktimes.df$start)
+               if(is.na(indices)) {
+                    print("Accelerometer started after the test!")
+               } else {
+                    if(is.na(indices$startIdx)) {
+                         indices$startIdx <- 1
+                    }
+                    if(is.na(indices$endIdx)) {
+                         indices$endIdx <- min(nrow(AC.1s), (indices$startIdx + (SCAN_DURATION * 2)))
+                    }
+                    AC.1s$datetime <- AC.1s$TimeStamp
+                    curr.result <- walktime.finder(df = AC.1s, ppt.walktimes.df = ppt.walktimes.df, indices = indices)
+                    result <- rbind(result, curr.result)
+                    colnames(result) <- colnames(curr.result)
+               }
+          } else {
+               print("No walking record found...")
+          }
+     }
+}
+
+write.csv(result, file = output_csv, row.names = F)
 rm(list = ls())
-
-
-
-
